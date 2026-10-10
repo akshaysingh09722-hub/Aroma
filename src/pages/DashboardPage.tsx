@@ -11,6 +11,7 @@ import { ForecastPlaceholder } from '../components/dashboard/ForecastPlaceholder
 import { CityStationMap } from '../components/maps/CityStationMap';
 import { LoadingSkeleton } from '../components/common/LoadingSkeleton';
 import { DemoNotice } from '../components/common/DemoNotice';
+<<<<<<< HEAD
 import { PollutionAlertModal } from '../components/alerts/PollutionAlertModal';
 import { CityCompareModal } from '../components/dashboard/CityCompareModal';
 import { EnvironmentalCopilot } from '../components/copilot/EnvironmentalCopilot';
@@ -24,6 +25,11 @@ import {
   Bot,
   Activity,
 } from 'lucide-react';
+=======
+import { FloatingARButton } from '../components/dashboard/FloatingARButton';
+import { ARView } from '../ar/ARView';
+import { Thermometer, Droplets, Wind, RefreshCw } from 'lucide-react';
+>>>>>>> 8bef3f557986079b96e15e1286fc5cc72e92b7fb
 
 export const DashboardPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,9 +43,13 @@ export const DashboardPage: React.FC = () => {
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+<<<<<<< HEAD
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+=======
+  const [showARModal, setShowARModal] = useState(false);
+>>>>>>> 8bef3f557986079b96e15e1286fc5cc72e92b7fb
 
   useEffect(() => {
     const found = CITIES_DATA.find(
@@ -294,6 +304,7 @@ export const DashboardPage: React.FC = () => {
         longitude={selectedCity.longitude}
       />
 
+<<<<<<< HEAD
       {/* Predictive AI Forecast Module Card */}
       <ForecastPlaceholder
         forecastData={selectedCity.forecast24h}
@@ -318,6 +329,28 @@ export const DashboardPage: React.FC = () => {
         onClose={() => setIsCopilotOpen(false)}
         city={selectedCity}
       />
+=======
+      {/* Floating AR Visualization Option inside the Dashboard */}
+      <FloatingARButton
+        onClick={() => setShowARModal(true)}
+        currentAQI={selectedCity.currentAQI}
+        cityName={selectedCity.name}
+      />
+
+      {/* Modal AR Visualization Experience */}
+      {showARModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-slate-200 p-4 sm:p-6 my-auto max-h-[92vh] overflow-y-auto">
+            <ARView
+              initialAQI={selectedCity.currentAQI}
+              initialCityName={selectedCity.name}
+              onClose={() => setShowARModal(false)}
+              isModal={true}
+            />
+          </div>
+        </div>
+      )}
+>>>>>>> 8bef3f557986079b96e15e1286fc5cc72e92b7fb
     </div>
   );
 };

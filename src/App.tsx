@@ -8,6 +8,7 @@ import { CityExplorerPage } from './pages/CityExplorerPage';
 import { Experience3DPage } from './pages/Experience3DPage';
 import { ScenarioLabPage } from './pages/ScenarioLabPage';
 import { AboutPage } from './pages/AboutPage';
+import { ARVisualizationPage } from './pages/ARVisualizationPage';
 
 export function App() {
   return (
@@ -21,6 +22,7 @@ export function App() {
           <Route path="/experience-3d" element={<Experience3DPage />} />
           <Route path="/scenario-lab" element={<ScenarioLabPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/ar" element={<ARVisualizationPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
