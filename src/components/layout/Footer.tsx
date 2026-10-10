@@ -52,6 +52,16 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/experience-3d" className="hover:text-emerald-400 transition-colors">
+                  3D Simulation & AR
+                </Link>
+              </li>
+              <li>
+                <Link to="/scenario-lab" className="hover:text-emerald-400 transition-colors">
+                  Pollution Scenario Lab
+                </Link>
+              </li>
+              <li>
                 <Link to="/about" className="hover:text-emerald-400 transition-colors">
                   Methodology & Architecture
                 </Link>

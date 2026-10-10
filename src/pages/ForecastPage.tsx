@@ -21,6 +21,9 @@ import {
   Compass,
   CheckCircle2,
   Calendar,
+  Download,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export const ForecastPage: React.FC = () => {
@@ -28,6 +31,7 @@ export const ForecastPage: React.FC = () => {
     CITIES_DATA[0]
   );
   const [horizon, setHorizon] = useState<'24h' | '48h' | '7d'>('24h');
+  const [showConfidence, setShowConfidence] = useState(true);
 
   const forecastPoints: ForecastPoint[] =
     horizon === '24h'
@@ -47,11 +51,31 @@ export const ForecastPage: React.FC = () => {
     trend: pt.trend,
   }));
 
-  // Find peak AQI point in this horizon
-  const peakPoint = [...forecastPoints].sort(
+  // Find peak and lowest AQI point in this horizon
+  const sortedPoints = [...forecastPoints].sort(
     (a, b) => b.predictedAQI - a.predictedAQI
-  )[0];
+  );
+  const peakPoint = sortedPoints[0];
+  const minPoint = sortedPoints[sortedPoints.length - 1];
   const peakScale = getAQIScale(peakPoint.predictedAQI);
+  const minScale = getAQIScale(minPoint.predictedAQI);
+
+  const exportForecastCSV = () => {
+    const headers = 'Time,PredictedAQI,LowerBound,UpperBound,Driver,Trend\n';
+    const rows = forecastPoints
+      .map(
+        (p) =>
+          `"${p.timeLabel}",${p.predictedAQI},${p.lowerBound},${p.upperBound},"${p.primaryDriver}","${p.trend}"`
+      )
+      .join('\n');
+    const blob = new Blob([headers + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedCity.id}-forecast-${horizon}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -90,11 +114,22 @@ export const ForecastPage: React.FC = () => {
           </p>
         </div>
 
-        <CitySearch
-          selectedCityId={selectedCity.id}
-          onSelectCity={setSelectedCity}
-          className="w-full sm:w-72"
-        />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <CitySearch
+            selectedCityId={selectedCity.id}
+            onSelectCity={setSelectedCity}
+            className="w-full sm:w-64"
+          />
+
+          <button
+            onClick={exportForecastCSV}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-all shrink-0"
+            title="Download CSV of forecast series"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Horizon Selector and Summary Header */}
@@ -137,9 +172,23 @@ export const ForecastPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-xs text-slate-500 flex items-center gap-1.5 font-mono">
-          <Clock className="w-3.5 h-3.5 text-slate-400" />
-          <span>Last Model Ingestion: 2026-10-10 11:45 UTC</span>
+        <div className="flex items-center gap-3 text-xs">
+          <button
+            onClick={() => setShowConfidence(!showConfidence)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold text-xs transition-all ${
+              showConfidence
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {showConfidence ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            <span>95% Confidence Band: {showConfidence ? 'ON' : 'OFF'}</span>
+          </button>
+
+          <div className="text-xs text-slate-400 hidden sm:flex items-center gap-1.5 font-mono">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <span>2026-10-10 11:45 UTC</span>
+          </div>
         </div>
       </div>
 
@@ -160,10 +209,12 @@ export const ForecastPage: React.FC = () => {
               <span className="w-3 h-0.5 bg-emerald-600" />
               <span>Predicted AQI</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-2 bg-emerald-100 border border-emerald-300" />
-              <span>Uncertainty Range</span>
-            </div>
+            {showConfidence && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-2 bg-emerald-100 border border-emerald-300" />
+                <span>Uncertainty Range</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -219,9 +270,11 @@ export const ForecastPage: React.FC = () => {
                         <div className="text-xl font-black text-emerald-400">
                           AQI {data.predictedAQI}
                         </div>
-                        <div className="text-[11px] text-slate-300">
-                          Confidence Range: [{data.lowerBound} – {data.upperBound}]
-                        </div>
+                        {showConfidence && (
+                          <div className="text-[11px] text-slate-300">
+                            Confidence Range: [{data.lowerBound} – {data.upperBound}]
+                          </div>
+                        )}
                         <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
                           Driver: {data.driver}
                         </div>
@@ -233,13 +286,15 @@ export const ForecastPage: React.FC = () => {
               />
 
               {/* Shaded Upper Uncertainty Area */}
-              <Area
-                type="monotone"
-                dataKey="upperBound"
-                stroke="transparent"
-                fill="#10B981"
-                fillOpacity={0.12}
-              />
+              {showConfidence && (
+                <Area
+                  type="monotone"
+                  dataKey="upperBound"
+                  stroke="transparent"
+                  fill="#10B981"
+                  fillOpacity={0.12}
+                />
+              )}
               {/* Predicted Line */}
               <Area
                 type="monotone"
@@ -254,7 +309,8 @@ export const ForecastPage: React.FC = () => {
       </div>
 
       {/* Forecast Key Insights Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* Forecast Key Insights Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Peak Pollution Alert */}
         <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-subtle space-y-2">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -273,6 +329,27 @@ export const ForecastPage: React.FC = () => {
           </div>
           <p className="text-xs text-slate-600 pt-1 leading-relaxed">
             {peakPoint.primaryDriver}
+          </p>
+        </div>
+
+        {/* Cleanest Window */}
+        <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-subtle space-y-2">
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            Cleanest Air Window
+          </div>
+          <div className="text-2xl font-black text-slate-900">
+            {minPoint.timeLabel}
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-bold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: `${minScale.hex}20`, color: minScale.hex }}
+            >
+              Min AQI {minPoint.predictedAQI} ({minScale.category})
+            </span>
+          </div>
+          <p className="text-xs text-slate-600 pt-1 leading-relaxed">
+            Optimal window for outdoor exercise and structural building ventilation.
           </p>
         </div>
 

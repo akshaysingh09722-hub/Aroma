@@ -8,8 +8,10 @@ import {
   Info,
   Menu,
   X,
+  Boxes,
   Database,
   Sparkles,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { api, DataSourceMode } from '../../services/api';
 
@@ -37,6 +39,8 @@ export const Navbar: React.FC = () => {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/forecast', label: 'Forecast', icon: TrendingUp },
     { to: '/cities', label: 'City Explorer', icon: MapPin },
+    { to: '/experience-3d', label: '3D Simulation', icon: Boxes },
+    { to: '/scenario-lab', label: 'Scenario Lab', icon: SlidersHorizontal },
     { to: '/about', label: 'About', icon: Info },
   ];
 

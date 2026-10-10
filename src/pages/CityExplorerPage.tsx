@@ -1,26 +1,39 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CITIES_DATA } from '../data/mockAirQualityData';
+import { CityAirQualityRecord } from '../types/airQuality';
 import { getAQIScale } from '../utils/aqiUtils';
 import { AQIBadge } from '../components/common/AQIBadge';
-import { ModulePlaceholder } from '../components/common/ModulePlaceholder';
+import { GlobalCityMap } from '../components/maps/GlobalCityMap';
+import { CityDetailModal } from '../components/common/CityDetailModal';
 import { DemoNotice } from '../components/common/DemoNotice';
 import {
   Search,
   MapPin,
   ArrowUpDown,
-  Compass,
+  LayoutGrid,
+  Map,
   ArrowRight,
   Wind,
   Thermometer,
+  Eye,
+  CheckCircle2,
+  ArrowRightLeft,
+  Filter,
 } from 'lucide-react';
+import { CityCompareModal } from '../components/dashboard/CityCompareModal';
 
 export const CityExplorerPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<'aqi-desc' | 'aqi-asc' | 'name'>('aqi-desc');
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [inspectedCity, setInspectedCity] = useState<CityAirQualityRecord | null>(null);
+  const [compareCity, setCompareCity] = useState<CityAirQualityRecord | null>(null);
 
   const regions = ['All', 'Asia', 'Europe', 'North America', 'South America', 'Africa', 'Oceania'];
+  const categories = ['All', 'Good', 'Moderate', 'Unhealthy for Sensitive Groups', 'Unhealthy', 'Very Unhealthy'];
 
   const filteredCities = CITIES_DATA.filter((city) => {
     const matchesSearch =
@@ -32,7 +45,11 @@ export const CityExplorerPage: React.FC = () => {
       city.continent === selectedRegion ||
       city.region.includes(selectedRegion);
 
-    return matchesSearch && matchesRegion;
+    const matchesCategory =
+      selectedCategory === 'All' ||
+      city.category.toLowerCase().includes(selectedCategory.toLowerCase());
+
+    return matchesSearch && matchesRegion && matchesCategory;
   }).sort((a, b) => {
     if (sortBy === 'aqi-desc') return b.currentAQI - a.currentAQI;
     if (sortBy === 'aqi-asc') return a.currentAQI - b.currentAQI;
@@ -58,6 +75,32 @@ export const CityExplorerPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Compare air quality benchmarks, primary pollutants, and environmental conditions across global metropolitan centers.
           </p>
+        </div>
+
+        {/* View Mode Toggle: Grid vs Map */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200/80 self-start sm:self-auto">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'grid'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Grid View</span>
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'map'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Map className="w-3.5 h-3.5" />
+            <span>Map View</span>
+          </button>
         </div>
       </div>
 
@@ -113,10 +156,51 @@ export const CityExplorerPage: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* AQI Category Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t border-slate-100 text-xs">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-slate-400" />
+            <span>AQI Scale:</span>
+          </span>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all shrink-0 border ${
+                selectedCategory === cat
+                  ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* City Cards Grid */}
-      {filteredCities.length === 0 ? (
+      {/* Main Content: Map View or Grid View */}
+      {viewMode === 'map' ? (
+        <div className="space-y-6">
+          <GlobalCityMap
+            cities={filteredCities}
+            selectedCityId={inspectedCity?.id}
+            onSelectCity={(city) => setInspectedCity(city)}
+          />
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <span className="font-semibold">
+              Tip: Click any marker on the world map to open the full meteorological & sensor telemetry modal.
+            </span>
+            <button
+              onClick={() => setViewMode('grid')}
+              className="text-emerald-700 font-bold hover:underline shrink-0"
+            >
+              Switch back to Grid View &rarr;
+            </button>
+          </div>
+        </div>
+      ) : filteredCities.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-subtle space-y-3">
           <MapPin className="w-10 h-10 text-slate-300 mx-auto" />
           <h3 className="text-base font-bold text-slate-800">
@@ -217,45 +301,75 @@ export const CityExplorerPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* View Details Link */}
-                <Link
-                  to={`/dashboard?city=${city.id}`}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white text-xs font-bold text-slate-800 transition-all group-hover:bg-emerald-600 group-hover:text-white"
-                >
-                  <span>Open in Dashboard</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                {/* Actions: Quick Inspect + Compare + Open in Dashboard */}
+                <div className="grid grid-cols-3 gap-1.5 pt-2">
+                  <button
+                    onClick={() => setInspectedCity(city)}
+                    className="inline-flex items-center justify-center gap-1 py-2 px-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-[11px] font-bold text-slate-700 transition-colors"
+                    title="Quick inspect telemetry"
+                  >
+                    <Eye className="w-3 h-3 text-slate-500" />
+                    <span>View</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCompareCity(city)}
+                    className="inline-flex items-center justify-center gap-1 py-2 px-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-[11px] font-bold text-slate-700 transition-colors"
+                    title="Benchmark against another city"
+                  >
+                    <ArrowRightLeft className="w-3 h-3 text-slate-500" />
+                    <span>Compare</span>
+                  </button>
+
+                  <Link
+                    to={`/dashboard?city=${city.id}`}
+                    className="inline-flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-slate-900 hover:bg-emerald-600 text-[11px] font-bold text-white transition-all shadow-sm"
+                  >
+                    <span>Dashboard</span>
+                  </Link>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Member 4 Spatial Map Placeholder */}
-      <ModulePlaceholder
-        title="Interactive Multi-City Geospatial Map"
-        subtitle="Full Leaflet/Mapbox vector layer embedding with dynamic AQI heat circles and station clusters."
-        assignedMember="Team Member 4"
-        memberRole="Geospatial & 3D Visualization Specialist"
-        targetFile="src/components/maps/GlobalCityMap.tsx"
-        icon={Compass}
-        badgeText="Spatial GIS Module"
-      >
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-xs text-slate-600">
-            <span className="font-bold text-slate-900 block">
-              Global Station Coordinate Grid Ready
-            </span>
-            <p>
-              Pre-configured with coordinates for all 12 cities across 5 continents with custom SVG marker pins.
+      {/* Member 4 Integration Status */}
+      <div className="rounded-2xl bg-slate-100 border border-slate-200/80 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900">
+              Interactive Geospatial Leaflet Engine Live
+            </h4>
+            <p className="text-xs text-slate-600">
+              Assigned to Team Member 4 (Geospatial & 3D). Active Leaflet coordinate grid with dynamic AQI color scale markers.
             </p>
           </div>
-
-          <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-mono font-semibold shrink-0">
-            Endpoint: GET /api/cities?view=map
-          </span>
         </div>
-      </ModulePlaceholder>
+
+        <button
+          onClick={() => setViewMode(viewMode === 'grid' ? 'map' : 'grid')}
+          className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-bold hover:bg-slate-50 transition-all shrink-0 shadow-sm"
+        >
+          Toggle {viewMode === 'grid' ? 'World Map View' : 'Card Grid View'}
+        </button>
+      </div>
+
+      {/* City Detail Modal */}
+      <CityDetailModal
+        city={inspectedCity}
+        onClose={() => setInspectedCity(null)}
+      />
+
+      {/* City Comparison Modal */}
+      <CityCompareModal
+        isOpen={!!compareCity}
+        onClose={() => setCompareCity(null)}
+        defaultCityA={compareCity || undefined}
+      />
     </div>
   );
 };

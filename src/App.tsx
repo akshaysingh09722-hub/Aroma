@@ -5,6 +5,8 @@ import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ForecastPage } from './pages/ForecastPage';
 import { CityExplorerPage } from './pages/CityExplorerPage';
+import { Experience3DPage } from './pages/Experience3DPage';
+import { ScenarioLabPage } from './pages/ScenarioLabPage';
 import { AboutPage } from './pages/AboutPage';
 
 export function App() {
@@ -16,6 +18,8 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/forecast" element={<ForecastPage />} />
           <Route path="/cities" element={<CityExplorerPage />} />
+          <Route path="/experience-3d" element={<Experience3DPage />} />
+          <Route path="/scenario-lab" element={<ScenarioLabPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
