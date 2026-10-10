@@ -10,6 +10,8 @@ import { HealthAdvisory } from '../components/dashboard/HealthAdvisory';
 import { ForecastPlaceholder } from '../components/dashboard/ForecastPlaceholder';
 import { CityMapPlaceholder } from '../components/dashboard/CityMapPlaceholder';
 import { DemoNotice } from '../components/common/DemoNotice';
+import { FloatingARButton } from '../components/dashboard/FloatingARButton';
+import { ARView } from '../ar/ARView';
 import { Thermometer, Droplets, Wind, RefreshCw } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -24,6 +26,7 @@ export const DashboardPage: React.FC = () => {
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showARModal, setShowARModal] = useState(false);
 
   useEffect(() => {
     const found = CITIES_DATA.find(
@@ -230,6 +233,27 @@ export const DashboardPage: React.FC = () => {
         latitude={selectedCity.latitude}
         longitude={selectedCity.longitude}
       />
+
+      {/* Floating AR Visualization Option inside the Dashboard */}
+      <FloatingARButton
+        onClick={() => setShowARModal(true)}
+        currentAQI={selectedCity.currentAQI}
+        cityName={selectedCity.name}
+      />
+
+      {/* Modal AR Visualization Experience */}
+      {showARModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-slate-200 p-4 sm:p-6 my-auto max-h-[92vh] overflow-y-auto">
+            <ARView
+              initialAQI={selectedCity.currentAQI}
+              initialCityName={selectedCity.name}
+              onClose={() => setShowARModal(false)}
+              isModal={true}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

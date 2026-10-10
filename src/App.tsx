@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ForecastPage } from './pages/ForecastPage';
 import { CityExplorerPage } from './pages/CityExplorerPage';
 import { AboutPage } from './pages/AboutPage';
+import { ARVisualizationPage } from './pages/ARVisualizationPage';
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
           <Route path="/forecast" element={<ForecastPage />} />
           <Route path="/cities" element={<CityExplorerPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/ar" element={<ARVisualizationPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
