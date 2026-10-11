@@ -60,9 +60,16 @@ export const ARView: React.FC<ARViewProps> = ({
 }) => {
   // Visual Simulation State
   const [aqi, setAqi] = useState<number>(initialAQI);
+  const [cityName, setCityName] = useState<string>(initialCityName);
   const [particlesEnabled, setParticlesEnabled] = useState<boolean>(true);
   const [smokeEnabled, setSmokeEnabled] = useState<boolean>(true);
   const [intensity, setIntensity] = useState<number>(1.0);
+
+  // Synchronize when parent city or AQI updates
+  useEffect(() => {
+    setAqi(initialAQI);
+    setCityName(initialCityName);
+  }, [initialAQI, initialCityName]);
 
   // Background Media State: 'photo' | 'camera'
   const [mediaMode, setMediaMode] = useState<'photo' | 'camera'>('photo');
@@ -322,7 +329,7 @@ export const ARView: React.FC<ARViewProps> = ({
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
-            Simulate and visualize particulate matter (PM2.5, PM10) and airborne smog overlaid directly onto real outdoor photographs or live camera feeds in real time for {initialCityName} and surrounding environments.
+            Simulate and visualize particulate matter (PM2.5, PM10) and airborne smog overlaid directly onto real outdoor photographs or live camera feeds in real time for {cityName} and surrounding environments.
           </p>
         </div>
 

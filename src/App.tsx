@@ -9,23 +9,29 @@ import { Experience3DPage } from './pages/Experience3DPage';
 import { ScenarioLabPage } from './pages/ScenarioLabPage';
 import { AboutPage } from './pages/AboutPage';
 import { ARVisualizationPage } from './pages/ARVisualizationPage';
+import { LocationProvider } from './context/LocationContext';
+import { EnvironmentalDataProvider } from './context/EnvironmentalDataContext';
 
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/forecast" element={<ForecastPage />} />
-          <Route path="/cities" element={<CityExplorerPage />} />
-          <Route path="/experience-3d" element={<Experience3DPage />} />
-          <Route path="/scenario-lab" element={<ScenarioLabPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/ar" element={<ARVisualizationPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <LocationProvider>
+        <EnvironmentalDataProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/forecast" element={<ForecastPage />} />
+              <Route path="/cities" element={<CityExplorerPage />} />
+              <Route path="/experience-3d" element={<Experience3DPage />} />
+              <Route path="/scenario-lab" element={<ScenarioLabPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/ar" element={<ARVisualizationPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </EnvironmentalDataProvider>
+      </LocationProvider>
     </BrowserRouter>
   );
 }

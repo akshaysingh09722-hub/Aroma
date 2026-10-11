@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useEnvironmentalData } from '../context/EnvironmentalDataContext';
+import { useLocationContext } from '../context/LocationContext';
 import { CITIES_DATA } from '../data/mockAirQualityData';
 import { CityAirQualityRecord } from '../types/airQuality';
 import { CitySearch } from '../components/common/CitySearch';
@@ -26,18 +28,15 @@ import {
   Activity,
   Scan,
   Sparkles,
+  Globe,
+  Radio,
+  AlertCircle,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const cityParam = searchParams.get('city') || 'tokyo';
-
-  const [selectedCity, setSelectedCity] = useState<CityAirQualityRecord>(() => {
-    return (
-      CITIES_DATA.find((c) => c.id.toLowerCase() === cityParam.toLowerCase()) ||
-      CITIES_DATA[0]
-    );
-  });
+  const [, setSearchParams] = useSearchParams();
+  const { selectedLocation, setSelectedLocation } = useLocationContext();
+  const { data: selectedCity, loading, error, mode, refresh, lastFetchedAt } = useEnvironmentalData();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
@@ -45,34 +44,70 @@ export const DashboardPage: React.FC = () => {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [isARModalOpen, setIsARModalOpen] = useState(false);
 
-  useEffect(() => {
-    const found = CITIES_DATA.find(
-      (c) => c.id.toLowerCase() === cityParam.toLowerCase()
-    );
-    if (found) {
-      setSelectedCity(found);
-    }
-  }, [cityParam]);
-
   const handleCityChange = (city: CityAirQualityRecord) => {
-    setSelectedCity(city);
-    setSearchParams({ city: city.id });
+    setSelectedLocation({
+      id: city.id,
+      name: city.name,
+      country: city.country,
+      region: city.region,
+      latitude: city.latitude,
+      longitude: city.longitude,
+    });
+    setSearchParams({ city: city.name.toLowerCase() });
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
+    await refresh();
     setTimeout(() => {
       setIsRefreshing(false);
-    }, 600);
+    }, 400);
   };
 
-  const quickCities = ['tokyo', 'new-york', 'london', 'new-delhi', 'paris', 'los-angeles'];
+  const quickCities = [
+    { name: 'New Delhi', country: 'India', lat: 28.6139, lng: 77.2090 },
+    { name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503 },
+    { name: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278 },
+    { name: 'New York', country: 'United States', lat: 40.7128, lng: -74.0060 },
+    { name: 'Mumbai', country: 'India', lat: 19.0760, lng: 72.8777 },
+    { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
+  ];
+
   const hasHighPollutionAlert = selectedCity.currentAQI >= 100;
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Demo Notice Banner */}
-      <DemoNotice message="Dashboard data is currently loaded from curated local sample records for interface design and module testing." />
+      {/* Dynamic Data Mode Banner */}
+      {mode === 'mock' ? (
+        <DemoNotice message="Demo Mock Mode active. Displaying curated baseline records. Switch to Live API in top navigation bar for real-time worldwide data." />
+      ) : (
+        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 sm:p-4 text-xs sm:text-sm text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <Radio className="w-4 h-4 text-emerald-600 animate-pulse shrink-0" />
+            <div>
+              <span className="font-bold text-emerald-900">
+                Live Environmental Satellite & Station Telemetry:
+              </span>{' '}
+              <span className="text-emerald-800">
+                Data dynamically sourced from Open-Meteo & Copernicus Atmospheric Monitoring Service (CAMS) for {selectedLocation.name}, {selectedLocation.country}.
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono bg-emerald-900/10 text-emerald-900 font-bold px-2 py-0.5 rounded border border-emerald-500/20">
+              CPCB NAQI Computed • Real-Time
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Error notification if API failed */}
+      {error && (
+        <div className="rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>Notice: {error} Displaying cached or fallback environmental measurements.</span>
+        </div>
+      )}
 
       {/* City Header & Controls Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
@@ -82,11 +117,11 @@ export const DashboardPage: React.FC = () => {
               Air Quality Dashboard
             </h1>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-              Live Station Feed (Mocked)
+              {mode === 'mock' ? 'Demo Mode' : 'Live Data: Worldwide'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Real-time multi-pollutant concentrations and regulatory health categories.
+            Real-time multi-pollutant concentrations and regulatory health categories for {selectedCity.name}, {selectedCity.country}.
           </p>
         </div>
 
@@ -95,7 +130,7 @@ export const DashboardPage: React.FC = () => {
           <CitySearch
             selectedCityId={selectedCity.id}
             onSelectCity={handleCityChange}
-            className="w-full sm:w-60"
+            className="w-full sm:w-72"
           />
 
           <div className="flex items-center gap-1.5 self-end sm:self-auto">
@@ -119,254 +154,225 @@ export const DashboardPage: React.FC = () => {
             {/* Compare Cities Button */}
             <button
               onClick={() => setIsCompareModalOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-all shrink-0"
-              title="Compare with another city"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-sm transition-all shrink-0"
+              title="Benchmark two cities side-by-side"
             >
-              <ArrowRightLeft className="w-3.5 h-3.5 text-slate-500" />
+              <ArrowRightLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Compare</span>
             </button>
 
-            {/* AI Copilot Button */}
+            {/* Copilot Action Button */}
             <button
               onClick={() => setIsCopilotOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition-all shrink-0"
-              title="Open Environmental Copilot"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow-sm transition-all shrink-0"
+              title="Open AI Environmental Copilot"
             >
-              <Bot className="w-3.5 h-3.5 text-emerald-400" />
+              <Bot className="w-3.5 h-3.5" />
               <span>Copilot</span>
             </button>
 
-            {/* AR Visualization Button */}
+            {/* In-Place AR Modal Launcher */}
             <button
               onClick={() => setIsARModalOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-sm shadow-emerald-500/20 transition-all shrink-0 active:scale-95"
-              title="Launch Street AR Air Pollution Visualization"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all shrink-0"
+              title="Preview in Augmented Reality"
             >
-              <Scan className="w-3.5 h-3.5" />
+              <Scan className="w-3.5 h-3.5 text-emerald-400" />
               <span className="hidden sm:inline">AR View</span>
             </button>
 
-            {/* Refresh Button */}
+            {/* Refresh Live Data */}
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="inline-flex items-center justify-center p-2 sm:py-2.5 sm:px-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm transition-all shrink-0"
-              title="Refresh sample readings"
-              aria-label="Refresh data"
+              disabled={isRefreshing || loading}
+              className="p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50 shrink-0"
+              title="Refresh telemetry"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`}
+                className={`w-4 h-4 ${isRefreshing || loading ? 'animate-spin text-emerald-600' : ''}`}
               />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Quick City Switcher Chips */}
+      {/* Quick City Navigation Chips Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider shrink-0">
-          Quick Jump:
+        <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider shrink-0">
+          Worldwide Cities:
         </span>
-        {quickCities.map((cid) => {
-          const c = CITIES_DATA.find((item) => item.id === cid);
-          if (!c) return null;
-          const isSelected = c.id === selectedCity.id;
+        {quickCities.map((q) => {
+          const isSelected = selectedLocation.name.toLowerCase() === q.name.toLowerCase();
           return (
             <button
-              key={cid}
-              onClick={() => handleCityChange(c)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shrink-0 border ${
+              key={q.name}
+              onClick={() => {
+                setSelectedLocation({
+                  id: q.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                  name: q.name,
+                  country: q.country,
+                  region: q.country,
+                  latitude: q.lat,
+                  longitude: q.lng,
+                });
+                setSearchParams({ city: q.name.toLowerCase() });
+              }}
+              className={`px-3 py-1 rounded-lg border font-semibold transition-all shrink-0 ${
                 isSelected
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              {c.name}
+              {q.name}
             </button>
           );
         })}
       </div>
 
-      {/* Weather Strip for Selected City */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-subtle text-xs">
-        <div className="flex items-center gap-2 text-slate-600">
-          <Thermometer className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>
-            Temp:{' '}
-            <strong className="text-slate-800 font-bold">
+      {/* Weather & Atmospheric Conditions Strip */}
+      <div className="rounded-2xl bg-white border border-slate-200/90 shadow-card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 text-xs sm:text-sm">
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-2 text-slate-600">
+            <Thermometer className="w-4 h-4 text-amber-500" />
+            <span>Temperature:</span>
+            <span className="font-bold text-slate-900 tabular-nums">
               {selectedCity.weather.temperature}°C
-            </strong>
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-600">
-          <Droplets className="w-4 h-4 text-cyan-500 shrink-0" />
-          <span>
-            Humidity:{' '}
-            <strong className="text-slate-800 font-bold">
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-slate-600">
+            <Droplets className="w-4 h-4 text-cyan-500" />
+            <span>Relative Humidity:</span>
+            <span className="font-bold text-slate-900 tabular-nums">
               {selectedCity.weather.humidity}%
-            </strong>
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-600">
-          <Wind className="w-4 h-4 text-emerald-500 shrink-0" />
-          <span>
-            Wind:{' '}
-            <strong className="text-slate-800 font-bold">
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-slate-600">
+            <Wind className="w-4 h-4 text-emerald-500" />
+            <span>Surface Wind:</span>
+            <span className="font-bold text-slate-900 tabular-nums">
               {selectedCity.weather.windSpeed} km/h ({selectedCity.weather.windDirection})
-            </strong>
-          </span>
+            </span>
+          </div>
+
+          <div className="text-slate-500 truncate" title={selectedCity.weather.condition}>
+            Atmosphere: <span className="text-slate-700 font-semibold">{selectedCity.weather.condition}</span>
+          </div>
         </div>
-        <div className="text-slate-500 truncate" title={selectedCity.weather.condition}>
-          Atmosphere: <span className="text-slate-700">{selectedCity.weather.condition}</span>
+
+        <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
+          <Activity className="w-3 h-3 text-emerald-500" />
+          <span>Coords: {selectedLocation.latitude.toFixed(2)}°, {selectedLocation.longitude.toFixed(2)}°</span>
+          {lastFetchedAt && (
+            <span className="hidden md:inline">• Synced {lastFetchedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          )}
         </div>
       </div>
 
-      {isRefreshing ? (
-        <div className="space-y-6">
-          <LoadingSkeleton variant="card" count={1} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <LoadingSkeleton variant="card" count={6} />
+      {/* Primary AQI Headline Banner */}
+      <AQICard
+        aqi={selectedCity.currentAQI}
+        cityName={selectedCity.name}
+        country={selectedCity.country}
+        dominantPollutant={selectedCity.dominantPollutant}
+        lastUpdated={selectedCity.lastUpdated}
+        isDemo={mode === 'mock'}
+      />
+
+      {/* Criteria Pollutant Breakdown Cards Grid */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
+              Criteria Pollutants Breakdown
+            </h2>
+            <p className="text-xs text-slate-500">
+              Continuous multi-pollutant concentrations versus national ambient air standards.
+            </p>
           </div>
-          <LoadingSkeleton variant="chart" />
+          <span className="text-xs font-mono text-slate-400">
+            6 Criteria Pollutants
+          </span>
         </div>
-      ) : (
-        <>
-          {/* Main AQI Overview Hero Card */}
-          <AQICard
-            aqi={selectedCity.currentAQI}
-            cityName={selectedCity.name}
-            country={selectedCity.country}
-            dominantPollutant={selectedCity.dominantPollutant}
-            lastUpdated={selectedCity.lastUpdated}
-            isDemo={true}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+          <PollutantCard
+            pollutant={selectedCity.pollutants.pm25}
+            isPrimary={selectedCity.dominantPollutant === 'pm25'}
           />
+          <PollutantCard
+            pollutant={selectedCity.pollutants.pm10}
+            isPrimary={selectedCity.dominantPollutant === 'pm10'}
+          />
+          <PollutantCard
+            pollutant={selectedCity.pollutants.no2}
+            isPrimary={selectedCity.dominantPollutant === 'no2'}
+          />
+          <PollutantCard
+            pollutant={selectedCity.pollutants.so2}
+            isPrimary={selectedCity.dominantPollutant === 'so2'}
+          />
+          <PollutantCard
+            pollutant={selectedCity.pollutants.co}
+            isPrimary={selectedCity.dominantPollutant === 'co'}
+          />
+          <PollutantCard
+            pollutant={selectedCity.pollutants.o3}
+            isPrimary={selectedCity.dominantPollutant === 'o3'}
+          />
+        </div>
+      </div>
 
-          {/* Key Pollutant Cards: PM2.5, PM10, NO2, SO2, CO, O3 */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                  Pollutant Breakdown
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Concentrations measured against EPA 24-hour health exposure limits
-                </p>
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                6 Criteria Pollutants
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <PollutantCard
-                pollutant={selectedCity.pollutants.pm25}
-                isPrimary={selectedCity.dominantPollutant === 'pm25'}
-              />
-              <PollutantCard
-                pollutant={selectedCity.pollutants.pm10}
-                isPrimary={selectedCity.dominantPollutant === 'pm10'}
-              />
-              <PollutantCard
-                pollutant={selectedCity.pollutants.no2}
-                isPrimary={selectedCity.dominantPollutant === 'no2'}
-              />
-              <PollutantCard
-                pollutant={selectedCity.pollutants.so2}
-                isPrimary={selectedCity.dominantPollutant === 'so2'}
-              />
-              <PollutantCard
-                pollutant={selectedCity.pollutants.co}
-                isPrimary={selectedCity.dominantPollutant === 'co'}
-              />
-              <PollutantCard
-                pollutant={selectedCity.pollutants.o3}
-                isPrimary={selectedCity.dominantPollutant === 'o3'}
-              />
-            </div>
-          </div>
-
-          {/* Historical Trend Chart */}
+      {/* Historical Trend Chart & Health Advisory */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-8">
           <HistoricalChart
             data24h={selectedCity.historical24h}
             data7d={selectedCity.historical7d}
             cityName={selectedCity.name}
           />
-        </>
-      )}
+        </div>
 
-      {/* Health Advisory Section */}
-      <HealthAdvisory
-        recommendations={selectedCity.healthRecommendations}
-        category={selectedCity.category}
-      />
-
-      {/* Interactive City Monitoring Station Leaflet Map */}
-      <CityStationMap
-        cityName={selectedCity.name}
-        stations={selectedCity.stations}
-        latitude={selectedCity.latitude}
-        longitude={selectedCity.longitude}
-      />
-
-      {/* Predictive AI Forecast Module Card */}
-      <ForecastPlaceholder
-        forecastData={selectedCity.forecast24h}
-        cityName={selectedCity.name}
-      />
-
-      {/* Street-Level AR Visualization Compact Feature Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 p-6 text-white border border-teal-500/30 shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold tracking-wide uppercase">
-              <Scan className="w-3.5 h-3.5" />
-              <span>AR Visualization Module</span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              See {selectedCity.name}&apos;s Air Pollution in Augmented Reality
-            </h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Overlay real-time WebGL particulate motes (PM2.5, PM10) and volumetric smog directly onto photos of local streets or stream live via your device camera. Adjust AQI from 0 to 500 to observe atmospheric dispersion changes.
-            </p>
-          </div>
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
-            <button
-              onClick={() => setIsARModalOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
-            >
-              <Scan className="w-4 h-4" />
-              <span>Launch AR Mode</span>
-            </button>
-            <a
-              href={`/ar?city=${selectedCity.id}`}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all"
-            >
-              <span>Dedicated Page</span>
-            </a>
-          </div>
+        <div className="lg:col-span-4">
+          <HealthAdvisory
+            recommendations={selectedCity.healthRecommendations}
+            category={selectedCity.category}
+          />
         </div>
       </div>
 
-      {/* Floating AR Visualization Option Button inside Dashboard */}
-      <button
-        onClick={() => setIsARModalOpen(true)}
-        className="fixed bottom-20 right-6 z-40 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 hover:from-teal-400 hover:via-emerald-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs shadow-xl shadow-emerald-500/30 border border-emerald-300/80 transition-all hover:scale-105 active:scale-95 group"
-        title="Open Street AR Air Pollution Visualization"
-        aria-label="Open Street AR Air Pollution Visualization"
-      >
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-950 opacity-60" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950" />
-        </span>
-        <Scan className="w-4 h-4 text-slate-950 group-hover:rotate-12 transition-transform" />
-        <span className="tracking-tight">AR Visualization</span>
-        <span className="text-[10px] bg-slate-950/20 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">
-          3D
-        </span>
-      </button>
+      {/* Leaflet Spatial Monitoring Map */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
+              Ground Stations & Sensor Network
+            </h2>
+            <p className="text-xs text-slate-500">
+              Spatial distribution of monitoring stations across the {selectedCity.name} metropolitan grid.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-slate-400">
+            OSM / CartoDB Tile Layer
+          </span>
+        </div>
 
-      {/* Modals & Overlays */}
+        <CityStationMap
+          cityName={selectedCity.name}
+          stations={selectedCity.stations}
+          latitude={selectedLocation.latitude}
+          longitude={selectedLocation.longitude}
+        />
+      </div>
+
+      {/* Predictive Forecast Teaser */}
+      <ForecastPlaceholder
+        cityName={selectedCity.name}
+        forecastData={selectedCity.forecast24h}
+      />
+
+      {/* Modals & Slide-overs */}
       <PollutionAlertModal
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
@@ -385,10 +391,10 @@ export const DashboardPage: React.FC = () => {
         city={selectedCity}
       />
 
-      {/* AR Visualization Modal Overlay */}
+      {/* In-place AR View Modal */}
       {isARModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
-          <div className="w-full max-w-7xl max-h-[96vh] overflow-y-auto bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-5xl h-[90vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 flex flex-col">
             <ARView
               initialAQI={selectedCity.currentAQI}
               initialCityName={selectedCity.name}

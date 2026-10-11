@@ -13,21 +13,37 @@ import {
   Boxes,
   SlidersHorizontal,
   Bot,
+  Radio,
 } from 'lucide-react';
-import { CITIES_DATA } from '../data/mockAirQualityData';
+import { useEnvironmentalData } from '../context/EnvironmentalDataContext';
+import { useLocationContext } from '../context/LocationContext';
 import { getAQIScale } from '../utils/aqiUtils';
 import { DemoNotice } from '../components/common/DemoNotice';
 import { AtmosphericHeroCanvas } from '../components/three/AtmosphericHeroCanvas';
 
 export const LandingPage: React.FC = () => {
-  // Use first city (Tokyo) for hero preview teaser
-  const sampleCity = CITIES_DATA[0];
+  const { selectedLocation } = useLocationContext();
+  const { data: sampleCity, mode } = useEnvironmentalData();
   const scale = getAQIScale(sampleCity.currentAQI);
 
   return (
     <div className="space-y-16 sm:space-y-24 py-4 sm:py-8">
-      {/* Demo Notice Banner */}
-      <DemoNotice message="Phase 1 Frontend Prototype active. Sample telemetry and forecast projections are illustrative." />
+      {/* Dynamic Data Mode Banner */}
+      {mode === 'mock' ? (
+        <DemoNotice message="Demo Mock Mode active. Sample telemetry and forecast projections are illustrative." />
+      ) : (
+        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs text-emerald-900 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+            <span>
+              Real-world environmental intelligence active for <strong>{sampleCity.name}, {sampleCity.country}</strong> via Open-Meteo & Copernicus CAMS.
+            </span>
+          </div>
+          <span className="font-mono text-[10px] bg-emerald-900/10 px-2 py-0.5 rounded font-bold">
+            Live Mode
+          </span>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-navy-900 via-navy-950 to-slate-950 text-white p-8 sm:p-14 lg:p-16 border border-slate-800 shadow-2xl">
@@ -45,7 +61,7 @@ export const LandingPage: React.FC = () => {
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Environmental AI Hackathon Platform • Phase 1</span>
+              <span>Worldwide Environmental AI Platform</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
@@ -56,7 +72,7 @@ export const LandingPage: React.FC = () => {
             </h1>
 
             <p className="text-base sm:text-lg text-slate-300 max-w-xl leading-relaxed font-normal">
-              AeroSense AI combines ground sensor networks, satellite optical depth, and spatiotemporal neural models to provide actionable urban air quality monitoring and 7-day predictive health alerts.
+              AeroSense AI combines ground sensor networks, satellite optical depth, and spatiotemporal neural models to provide actionable urban air quality monitoring and 7-day predictive health alerts for any city on Earth.
             </p>
 
             {/* Action Buttons */}
@@ -89,8 +105,8 @@ export const LandingPage: React.FC = () => {
             {/* Micro stats */}
             <div className="pt-6 border-t border-slate-800/80 grid grid-cols-3 gap-4 text-left">
               <div>
-                <div className="text-2xl font-black text-white tabular-nums">12</div>
-                <div className="text-xs text-slate-400">Global Cities</div>
+                <div className="text-2xl font-black text-white tabular-nums">Global</div>
+                <div className="text-xs text-slate-400">Any City Worldwide</div>
               </div>
               <div>
                 <div className="text-2xl font-black text-emerald-400 tabular-nums">7 Days</div>
@@ -113,8 +129,8 @@ export const LandingPage: React.FC = () => {
                     {sampleCity.name}, {sampleCity.country}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  DEMO DATA
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  {mode === 'mock' ? 'DEMO DATA' : 'LIVE API'}
                 </span>
               </div>
 
@@ -155,7 +171,10 @@ export const LandingPage: React.FC = () => {
                   <span className="font-semibold">{sampleCity.pollutants.pm25.value} µg/m³</span>
                 </div>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-400 h-full w-[29%]" />
+                  <div
+                    className="bg-emerald-400 h-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.round((sampleCity.pollutants.pm25.value / 60) * 100))}%` }}
+                  />
                 </div>
 
                 <div className="flex justify-between text-xs text-slate-300 pt-1">
@@ -163,7 +182,10 @@ export const LandingPage: React.FC = () => {
                   <span className="font-semibold">{sampleCity.pollutants.pm10.value} µg/m³</span>
                 </div>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-400 h-full w-[15%]" />
+                  <div
+                    className="bg-emerald-400 h-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.round((sampleCity.pollutants.pm10.value / 100) * 100))}%` }}
+                  />
                 </div>
               </div>
 
@@ -203,7 +225,7 @@ export const LandingPage: React.FC = () => {
                 Real-Time Monitoring
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Multi-station telemetry for PM2.5, PM10, NO2, SO2, CO, and O3 with automatic EPA categorization and sensor health status.
+                Multi-station telemetry for PM2.5, PM10, NO2, SO2, CO, and O3 with automatic EPA / CPCB categorization and sensor health status.
               </p>
             </div>
             <div className="pt-2 text-xs font-semibold text-emerald-700 flex items-center gap-1">
@@ -317,46 +339,6 @@ export const LandingPage: React.FC = () => {
             <span>Try Copilot on Dashboard</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
-      </section>
-
-      {/* Team Handoff Architecture Banner */}
-      <section className="rounded-2xl bg-slate-100 border border-slate-200/80 p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900">
-              Hackathon Team Development Foundation
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Modular structure ready for independent development across all 4 project pillars.
-            </p>
-          </div>
-          <Link
-            to="/about"
-            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800"
-          >
-            <span>View Architecture Breakdown</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-white border border-slate-200">
-            <span className="font-bold text-slate-900 block">Member 1: Frontend & UX</span>
-            <span className="text-slate-500">Shared components, responsive design system.</span>
-          </div>
-          <div className="p-3 rounded-xl bg-white border border-slate-200">
-            <span className="font-bold text-slate-900 block">Member 2: Backend & APIs</span>
-            <span className="text-slate-500">FastAPI/Node endpoints and real OpenAQ ingestion.</span>
-          </div>
-          <div className="p-3 rounded-xl bg-white border border-slate-200">
-            <span className="font-bold text-slate-900 block">Member 3: AI/ML Forecasting</span>
-            <span className="text-slate-500">Temporal Fusion Transformer and time-series model.</span>
-          </div>
-          <div className="p-3 rounded-xl bg-white border border-slate-200">
-            <span className="font-bold text-slate-900 block">Member 4: Spatial/3D Prototypes</span>
-            <span className="text-slate-500">Leaflet mapping and 3D urban dispersion views.</span>
-          </div>
         </div>
       </section>
     </div>
