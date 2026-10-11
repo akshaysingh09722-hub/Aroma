@@ -46,23 +46,22 @@ export const EnvironmentalCopilot: React.FC<EnvironmentalCopilotProps> = ({
 
   const scale = getAQIScale(city.currentAQI);
 
-  // Initialize initial welcome message
+  // Update or reset welcome message whenever the selected city changes
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: 'welcome',
-          sender: 'assistant',
-          text: `Hello! I am the AeroSense Environmental Copilot. I analyze real-time telemetry and predictive models for **${city.name}, ${city.country}**. How can I help you understand ambient air conditions or health precautions today?`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          citations: [
-            `Ground Sensor Ingestion: ${city.stations.length} Active Stations`,
-            `Telemetry Timestamp: ${city.lastUpdated}`,
-          ],
-        },
-      ]);
-    }
-  }, [city]);
+    setMessages([
+      {
+        id: `welcome-${city.id}`,
+        sender: 'assistant',
+        text: `Hello! I am the AeroSense Environmental Copilot. I analyze real-time telemetry and predictive models for **${city.name}, ${city.country}** (Current AQI: ${city.currentAQI} • ${scale.category}). How can I help you understand ambient air conditions or health precautions today?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        citations: [
+          `Ground Sensor / Atmospheric Ingestion: ${city.stations?.length || 2} Stations`,
+          `Telemetry Timestamp: ${city.lastUpdated}`,
+          `Dominant Pollutant: ${city.dominantPollutant.toUpperCase()}`,
+        ],
+      },
+    ]);
+  }, [city.id, city.name, city.currentAQI]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

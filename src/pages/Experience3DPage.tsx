@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { CITIES_DATA } from '../data/mockAirQualityData';
-import { CityAirQualityRecord } from '../types/airQuality';
+import { useLocationContext } from '../context/LocationContext';
+import { useEnvironmentalData } from '../context/EnvironmentalDataContext';
 import { UrbanPollution3DCanvas } from '../components/three/UrbanPollution3DCanvas';
 import { AQI_LEVELS, getAQIScale } from '../utils/aqiUtils';
 import { DemoNotice } from '../components/common/DemoNotice';
+import { CitySearch } from '../components/common/CitySearch';
 import {
   Layers,
   Wind,
@@ -14,23 +15,22 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
+  Radio,
 } from 'lucide-react';
 
 export const Experience3DPage: React.FC = () => {
-  const [selectedCity, setSelectedCity] = useState<CityAirQualityRecord>(
-    CITIES_DATA[0]
-  );
-  const [simulatedAQI, setSimulatedAQI] = useState<number>(
-    selectedCity.currentAQI
-  );
-  const [windSpeed, setWindSpeed] = useState<number>(14);
+  const { selectedLocation } = useLocationContext();
+  const { data: selectedCity, mode } = useEnvironmentalData();
+
+  const [simulatedAQI, setSimulatedAQI] = useState<number>(selectedCity.currentAQI);
+  const [windSpeed, setWindSpeed] = useState<number>(selectedCity.weather.windSpeed || 14);
   const [showBoundaryLayer, setShowBoundaryLayer] = useState<boolean>(true);
   const [arSupported, setArSupported] = useState<boolean | null>(null);
 
   // Sync simulated AQI when city changes
   useEffect(() => {
     setSimulatedAQI(selectedCity.currentAQI);
-    setWindSpeed(selectedCity.weather.windSpeed);
+    setWindSpeed(selectedCity.weather.windSpeed || 14);
   }, [selectedCity]);
 
   // Check WebXR AR capability
@@ -47,7 +47,7 @@ export const Experience3DPage: React.FC = () => {
 
   const handleResetSimulation = () => {
     setSimulatedAQI(selectedCity.currentAQI);
-    setWindSpeed(selectedCity.weather.windSpeed);
+    setWindSpeed(selectedCity.weather.windSpeed || 14);
     setShowBoundaryLayer(true);
   };
 
@@ -56,7 +56,21 @@ export const Experience3DPage: React.FC = () => {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Notice Banner */}
-      <DemoNotice message="3D Urban Simulation Prototype. Uses WebGL procedural rendering and volumetric particle dispersion based on atmospheric mechanics." />
+      {mode === 'mock' ? (
+        <DemoNotice message="3D Urban Simulation Prototype. Uses WebGL procedural rendering and volumetric particle dispersion based on atmospheric mechanics." />
+      ) : (
+        <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/30 p-3.5 text-xs text-cyan-950 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-cyan-600 animate-pulse" />
+            <span>
+              Real-world environmental inputs active: <strong>{selectedCity.name}, {selectedCity.country}</strong> (AQI {selectedCity.currentAQI}, wind {selectedCity.weather.windSpeed} km/h).
+            </span>
+          </div>
+          <span className="font-mono text-[10px] bg-cyan-900/10 px-2 py-0.5 rounded font-bold">
+            Live 3D Telemetry
+          </span>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
@@ -70,23 +84,13 @@ export const Experience3DPage: React.FC = () => {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Explore volumetric particulate smog, wind vectors, and boundary layer capping over procedural metropolitan blocks.
+            Simulate volumetric particulate smog, wind vectors, and boundary layer capping over metropolitan blocks for {selectedCity.name}.
           </p>
         </div>
 
-        {/* AR Status Badge */}
-        <div className="flex items-center gap-2">
-          {arSupported ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>WebXR AR Device Ready</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold" title="WebXR immersive-ar requires compatible Android/iOS AR headset/device">
-              <Glasses className="w-4 h-4 text-slate-500" />
-              <span>3D Desktop View (AR Simulated)</span>
-            </span>
-          )}
+        {/* Global City Search */}
+        <div className="w-full sm:w-72">
+          <CitySearch />
         </div>
       </div>
 
@@ -96,7 +100,7 @@ export const Experience3DPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-emerald-600" />
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-              Atmospheric Simulation Controls
+              Atmospheric Simulation Controls — {selectedCity.name}
             </h3>
           </div>
 
@@ -106,31 +110,21 @@ export const Experience3DPage: React.FC = () => {
               className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset to City Actuals</span>
+              <span>Reset to City Actuals ({selectedCity.currentAQI} AQI)</span>
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 text-xs">
-          {/* City Selector */}
+          {/* Active Metropolitan Target Display */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700 block">
               Metropolitan Target:
             </label>
-            <select
-              value={selectedCity.id}
-              onChange={(e) => {
-                const found = CITIES_DATA.find((c) => c.id === e.target.value);
-                if (found) setSelectedCity(found);
-              }}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
-            >
-              {CITIES_DATA.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}, {c.country} (AQI {c.currentAQI})
-                </option>
-              ))}
-            </select>
+            <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-900 flex items-center justify-between">
+              <span className="truncate">{selectedCity.name}, {selectedCity.country}</span>
+              <span className="font-mono text-emerald-600 shrink-0 ml-1">AQI {selectedCity.currentAQI}</span>
+            </div>
             <span className="text-[10px] text-slate-400 block">
               Observed AQI: {selectedCity.currentAQI} ({selectedCity.category})
             </span>
@@ -218,7 +212,7 @@ export const Experience3DPage: React.FC = () => {
             </h3>
           </div>
           <span className="text-[11px] font-mono text-slate-400">
-            EPA Standard Intervals
+            CPCB / EPA Intervals
           </span>
         </div>
 
@@ -260,12 +254,9 @@ export const Experience3DPage: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <Info className="w-4 h-4 text-cyan-600 shrink-0" />
           <span>
-            <strong>Simulated Dispersion Physics:</strong> Aerosol particle velocity in the 3D scene responds directly to the surface boundary layer height and horizontal wind vector.
+            <strong>Simulated Dispersion Physics:</strong> Aerosol particle velocity in the 3D scene responds directly to the surface boundary layer height and horizontal wind vector ({selectedCity.weather.windSpeed} km/h from {selectedCity.weather.windDirection}).
           </span>
         </div>
-        <span className="font-mono text-slate-500 text-[11px] bg-white px-2.5 py-1 rounded border border-slate-200 shrink-0">
-          Member 4 3D Visualization Milestone
-        </span>
       </div>
     </div>
   );

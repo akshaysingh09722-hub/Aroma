@@ -26,14 +26,24 @@ export const CityCompareModal: React.FC<CityCompareModalProps> = ({
   defaultCityA = CITIES_DATA[0],
 }) => {
   const [cityAId, setCityAId] = useState(defaultCityA.id);
-  const [cityBId, setCityBId] = useState(
-    CITIES_DATA.find((c) => c.id !== defaultCityA.id)?.id || CITIES_DATA[1].id
-  );
+  const [cityBId, setCityBId] = useState(() => {
+    const other = CITIES_DATA.find((c) => c.id !== defaultCityA.id);
+    return other ? other.id : CITIES_DATA[1].id;
+  });
+
+  // Keep comparison list including defaultCityA if not present in CITIES_DATA
+  const availableCities = React.useMemo(() => {
+    const list = [...CITIES_DATA];
+    if (!list.some((c) => c.id === defaultCityA.id || c.name.toLowerCase() === defaultCityA.name.toLowerCase())) {
+      list.unshift(defaultCityA);
+    }
+    return list;
+  }, [defaultCityA]);
 
   if (!isOpen) return null;
 
-  const cityA = CITIES_DATA.find((c) => c.id === cityAId) || CITIES_DATA[0];
-  const cityB = CITIES_DATA.find((c) => c.id === cityBId) || CITIES_DATA[1];
+  const cityA = availableCities.find((c) => c.id === cityAId) || defaultCityA;
+  const cityB = availableCities.find((c) => c.id === cityBId) || CITIES_DATA[1];
 
   const scaleA = getAQIScale(cityA.currentAQI);
   const scaleB = getAQIScale(cityB.currentAQI);
@@ -120,7 +130,7 @@ export const CityCompareModal: React.FC<CityCompareModalProps> = ({
               onChange={(e) => setCityAId(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
             >
-              {CITIES_DATA.map((c) => (
+              {availableCities.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}, {c.country} (AQI {c.currentAQI})
                 </option>
@@ -137,7 +147,7 @@ export const CityCompareModal: React.FC<CityCompareModalProps> = ({
               onChange={(e) => setCityBId(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
             >
-              {CITIES_DATA.map((c) => (
+              {availableCities.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}, {c.country} (AQI {c.currentAQI})
                 </option>

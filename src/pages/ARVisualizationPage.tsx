@@ -1,19 +1,16 @@
 import React from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ARView } from '../ar/ARView';
-import { CITIES_DATA } from '../data/mockAirQualityData';
+import { useEnvironmentalData } from '../context/EnvironmentalDataContext';
+import { useLocationContext } from '../context/LocationContext';
 
 export const ARVisualizationPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const cityParam = searchParams.get('city') || 'tokyo';
-
-  const selectedCity =
-    CITIES_DATA.find((c) => c.id.toLowerCase() === cityParam.toLowerCase()) ||
-    CITIES_DATA[0];
+  const { selectedLocation } = useLocationContext();
+  const { data: selectedCity } = useEnvironmentalData();
 
   const handleBackToDashboard = () => {
-    navigate(`/dashboard?city=${selectedCity.id}`);
+    navigate('/dashboard');
   };
 
   return (
