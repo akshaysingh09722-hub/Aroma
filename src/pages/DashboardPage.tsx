@@ -14,6 +14,7 @@ import { DemoNotice } from '../components/common/DemoNotice';
 import { PollutionAlertModal } from '../components/alerts/PollutionAlertModal';
 import { CityCompareModal } from '../components/dashboard/CityCompareModal';
 import { EnvironmentalCopilot } from '../components/copilot/EnvironmentalCopilot';
+import { ARView } from '../ar/ARView';
 import {
   Thermometer,
   Droplets,
@@ -23,6 +24,8 @@ import {
   ArrowRightLeft,
   Bot,
   Activity,
+  Scan,
+  Sparkles,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -40,6 +43,7 @@ export const DashboardPage: React.FC = () => {
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isARModalOpen, setIsARModalOpen] = useState(false);
 
   useEffect(() => {
     const found = CITIES_DATA.find(
@@ -130,6 +134,16 @@ export const DashboardPage: React.FC = () => {
             >
               <Bot className="w-3.5 h-3.5 text-emerald-400" />
               <span>Copilot</span>
+            </button>
+
+            {/* AR Visualization Button */}
+            <button
+              onClick={() => setIsARModalOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-sm shadow-emerald-500/20 transition-all shrink-0 active:scale-95"
+              title="Launch Street AR Air Pollution Visualization"
+            >
+              <Scan className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AR View</span>
             </button>
 
             {/* Refresh Button */}
@@ -300,6 +314,58 @@ export const DashboardPage: React.FC = () => {
         cityName={selectedCity.name}
       />
 
+      {/* Street-Level AR Visualization Compact Feature Card */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 p-6 text-white border border-teal-500/30 shadow-xl">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold tracking-wide uppercase">
+              <Scan className="w-3.5 h-3.5" />
+              <span>AR Visualization Module</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              See {selectedCity.name}&apos;s Air Pollution in Augmented Reality
+            </h3>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Overlay real-time WebGL particulate motes (PM2.5, PM10) and volumetric smog directly onto photos of local streets or stream live via your device camera. Adjust AQI from 0 to 500 to observe atmospheric dispersion changes.
+            </p>
+          </div>
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => setIsARModalOpen(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
+            >
+              <Scan className="w-4 h-4" />
+              <span>Launch AR Mode</span>
+            </button>
+            <a
+              href={`/ar?city=${selectedCity.id}`}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all"
+            >
+              <span>Dedicated Page</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating AR Visualization Option Button inside Dashboard */}
+      <button
+        onClick={() => setIsARModalOpen(true)}
+        className="fixed bottom-20 right-6 z-40 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 hover:from-teal-400 hover:via-emerald-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs shadow-xl shadow-emerald-500/30 border border-emerald-300/80 transition-all hover:scale-105 active:scale-95 group"
+        title="Open Street AR Air Pollution Visualization"
+        aria-label="Open Street AR Air Pollution Visualization"
+      >
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-950 opacity-60" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950" />
+        </span>
+        <Scan className="w-4 h-4 text-slate-950 group-hover:rotate-12 transition-transform" />
+        <span className="tracking-tight">AR Visualization</span>
+        <span className="text-[10px] bg-slate-950/20 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">
+          3D
+        </span>
+      </button>
+
       {/* Modals & Overlays */}
       <PollutionAlertModal
         isOpen={isAlertModalOpen}
@@ -318,6 +384,20 @@ export const DashboardPage: React.FC = () => {
         onClose={() => setIsCopilotOpen(false)}
         city={selectedCity}
       />
+
+      {/* AR Visualization Modal Overlay */}
+      {isARModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
+          <div className="w-full max-w-7xl max-h-[96vh] overflow-y-auto bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 relative">
+            <ARView
+              initialAQI={selectedCity.currentAQI}
+              initialCityName={selectedCity.name}
+              onClose={() => setIsARModalOpen(false)}
+              isModal={true}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
