@@ -29,10 +29,10 @@ export const GlobalCityMap: React.FC<GlobalCityMapProps> = ({
     }
 
     const map = L.map(mapContainerRef.current, {
-      center: [20, 0],
-      zoom: 2,
-      minZoom: 2,
-      maxZoom: 10,
+      center: [22.5937, 78.9629],
+      zoom: 5,
+      minZoom: 4,
+      maxZoom: 12,
       scrollWheelZoom: false,
       zoomControl: true,
       attributionControl: true,
@@ -101,7 +101,7 @@ export const GlobalCityMap: React.FC<GlobalCityMapProps> = ({
 
       marker.on('click', () => {
         onSelectCity(city);
-        map.setView([city.latitude, city.longitude], 6, { animate: true });
+        map.setView([city.latitude, city.longitude], 7, { animate: true });
       });
     });
 
@@ -113,7 +113,7 @@ export const GlobalCityMap: React.FC<GlobalCityMapProps> = ({
 
   const handleReset = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([20, 0], 2, { animate: true });
+      mapInstanceRef.current.setView([22.5937, 78.9629], 5, { animate: true });
     }
   };
 
@@ -123,7 +123,7 @@ export const GlobalCityMap: React.FC<GlobalCityMapProps> = ({
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-emerald-600" />
           <span className="font-extrabold text-slate-900">
-            Global Urban AQI Map View ({cities.length} Cities)
+            National CAAQMS Air Quality Network ({cities.length} Indian Hubs)
           </span>
         </div>
 
@@ -132,7 +132,7 @@ export const GlobalCityMap: React.FC<GlobalCityMapProps> = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold shadow-sm transition-all"
         >
           <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-          <span>Reset World View</span>
+          <span>Reset India View</span>
         </button>
       </div>
 

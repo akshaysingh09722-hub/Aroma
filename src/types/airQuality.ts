@@ -8,9 +8,12 @@ export type AQICategory =
   | 'Insufficient Data'
   | 'Unhealthy for Sensitive Groups'
   | 'Unhealthy'
+  | 'Very Unhealthy'
   | 'Hazardous';
 
-export type PollutantType = 'pm25' | 'pm10' | 'no2' | 'so2' | 'co' | 'o3' | 'nh3' | 'pb';
+export type CriteriaPollutantType = 'pm25' | 'pm10' | 'no2' | 'so2' | 'co' | 'o3';
+export type OptionalPollutantType = 'nh3' | 'pb';
+export type PollutantType = CriteriaPollutantType | OptionalPollutantType;
 
 export interface PollutantMeasurement {
   id: PollutantType;
@@ -98,7 +101,7 @@ export interface CityAirQualityRecord {
   currentAQI: number;
   dominantPollutant: PollutantType;
   category: AQICategory;
-  pollutants: Record<PollutantType, PollutantMeasurement>;
+  pollutants: Record<CriteriaPollutantType, PollutantMeasurement> & Partial<Record<OptionalPollutantType, PollutantMeasurement>>;
   weather: WeatherData;
   stations: MonitoringStation[];
   historical24h: HistoricalReading[];

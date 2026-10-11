@@ -1,6 +1,10 @@
 /**
  * Central Pollution Control Board (CPCB), Ministry of Environment, Forest & Climate Change, Govt of India
  * Official National Air Quality Index (NAQI) Calculation Engine (TypeScript / Client-side).
+ *
+ * Grounded in:
+ * - CPCB Technical Report: "National Air Quality Index" (October 2014) Table 3 & Section 3.2.
+ * - Official CPCB Operational Calculator: `AQI-Calculator.xls`.
  */
 
 export type CPCB_CategoryName =
@@ -122,84 +126,99 @@ export const CPCB_AQI_LEVELS: CPCBAQIScale[] = [
 ];
 
 // Official CPCB Breakpoints: [B_low, B_high, I_low, I_high]
-const CPCB_BREAKPOINTS: Record<string, [number, number, number, number][]> = {
+// Contiguous intervals matching official CPCB guidelines and spreadsheet formula
+export const CPCB_BREAKPOINTS: Record<string, [number, number, number, number][]> = {
   pm25: [
     [0.0, 30.0, 0, 50],
-    [30.1, 60.0, 51, 100],
-    [60.1, 90.0, 101, 200],
-    [90.1, 120.0, 201, 300],
-    [120.1, 250.0, 301, 400],
-    [250.1, 380.0, 401, 500],
+    [30.0, 60.0, 50, 100],
+    [60.0, 90.0, 100, 200],
+    [90.0, 120.0, 200, 300],
+    [120.0, 250.0, 300, 400],
+    [250.0, 380.0, 400, 500],
   ],
   pm10: [
     [0.0, 50.0, 0, 50],
-    [50.1, 100.0, 51, 100],
-    [100.1, 250.0, 101, 200],
-    [250.1, 350.0, 201, 300],
-    [350.1, 430.0, 301, 400],
-    [430.1, 510.0, 401, 500],
+    [50.0, 100.0, 50, 100],
+    [100.0, 250.0, 100, 200],
+    [250.0, 350.0, 200, 300],
+    [350.0, 430.0, 300, 400],
+    [430.0, 510.0, 400, 500],
   ],
   no2: [
     [0.0, 40.0, 0, 50],
-    [40.1, 80.0, 51, 100],
-    [80.1, 180.0, 101, 200],
-    [180.1, 280.0, 201, 300],
-    [280.1, 400.0, 301, 400],
-    [400.1, 500.0, 401, 500],
+    [40.0, 80.0, 50, 100],
+    [80.0, 180.0, 100, 200],
+    [180.0, 280.0, 200, 300],
+    [280.0, 400.0, 300, 400],
+    [400.0, 500.0, 400, 500],
   ],
   so2: [
     [0.0, 40.0, 0, 50],
-    [40.1, 80.0, 51, 100],
-    [80.1, 380.0, 101, 200],
-    [381.1, 800.0, 201, 300],
-    [800.1, 1600.0, 301, 400],
-    [1600.1, 2000.0, 401, 500],
+    [40.0, 80.0, 50, 100],
+    [80.0, 380.0, 100, 200],
+    [380.0, 800.0, 200, 300],
+    [800.0, 1600.0, 300, 400],
+    [1600.0, 2000.0, 400, 500],
   ],
   co: [
     [0.0, 1.0, 0, 50],
-    [1.01, 2.0, 51, 100],
-    [2.01, 10.0, 101, 200],
-    [10.01, 17.0, 201, 300],
-    [17.01, 34.0, 301, 400],
-    [34.01, 40.0, 401, 500],
+    [1.0, 2.0, 50, 100],
+    [2.0, 10.0, 100, 200],
+    [10.0, 17.0, 200, 300],
+    [17.0, 34.0, 300, 400],
+    [34.0, 40.0, 400, 500],
   ],
   o3: [
     [0.0, 50.0, 0, 50],
-    [50.1, 100.0, 51, 100],
-    [100.1, 168.0, 101, 200],
-    [168.1, 208.0, 201, 300],
-    [208.1, 748.0, 301, 400],
-    [748.1, 800.0, 401, 500],
+    [50.0, 100.0, 50, 100],
+    [100.0, 168.0, 100, 200],
+    [168.0, 208.0, 200, 300],
+    [208.0, 748.0, 300, 400],
+    [748.0, 800.0, 400, 500],
   ],
   nh3: [
     [0.0, 200.0, 0, 50],
-    [200.1, 400.0, 51, 100],
-    [400.1, 800.0, 101, 200],
-    [800.1, 1200.0, 201, 300],
-    [1200.1, 1800.0, 301, 400],
-    [1800.1, 2000.0, 401, 500],
+    [200.0, 400.0, 50, 100],
+    [400.0, 800.0, 100, 200],
+    [800.0, 1200.0, 200, 300],
+    [1200.0, 1800.0, 300, 400],
+    [1800.0, 2000.0, 400, 500],
   ],
   pb: [
     [0.0, 0.5, 0, 50],
-    [0.51, 1.0, 51, 100],
-    [1.01, 2.0, 101, 200],
-    [2.01, 3.0, 201, 300],
-    [3.01, 3.5, 301, 400],
-    [3.51, 4.0, 401, 500],
+    [0.5, 1.0, 50, 100],
+    [1.0, 2.0, 100, 200],
+    [2.0, 3.0, 200, 300],
+    [3.0, 3.5, 300, 400],
+    [3.5, 4.0, 400, 500],
   ],
 };
 
+export function normalizePollutantKey(pollutant: string): string {
+  return pollutant.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export function calculateCPCBSubIndex(pollutant: string, concentration: number | null | undefined): number | null {
-  if (concentration === null || concentration === undefined || concentration < 0 || isNaN(concentration)) {
+  if (
+    concentration === null ||
+    concentration === undefined ||
+    typeof concentration !== 'number' ||
+    isNaN(concentration) ||
+    !isFinite(concentration) ||
+    concentration < 0
+  ) {
     return null;
   }
 
-  const key = pollutant.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const key = normalizePollutantKey(pollutant);
   const intervals = CPCB_BREAKPOINTS[key];
   if (!intervals) return null;
 
-  for (const [bLo, bHi, iLo, iHi] of intervals) {
-    if (concentration >= bLo && concentration <= bHi) {
+  for (let i = 0; i < intervals.length; i++) {
+    const [bLo, bHi, iLo, iHi] = intervals[i];
+    const inRange = i === 0 ? concentration >= bLo && concentration <= bHi : concentration > bLo && concentration <= bHi;
+    if (inRange) {
+      if (bHi === bLo) return iLo;
       const sub = ((iHi - iLo) / (bHi - bLo)) * (concentration - bLo) + iLo;
       return Math.round(sub);
     }
@@ -228,9 +247,11 @@ export function calculateCPCBNAQI(concentrations: Record<string, number | null |
   const subIndices: Record<string, number> = {};
 
   for (const [key, val] of Object.entries(concentrations)) {
-    const sub = calculateCPCBSubIndex(key, val);
+    const normKey = normalizePollutantKey(key);
+    if (!normKey || !CPCB_BREAKPOINTS[normKey]) continue;
+    const sub = calculateCPCBSubIndex(normKey, val);
     if (sub !== null) {
-      subIndices[key.toLowerCase()] = sub;
+      subIndices[normKey] = sub;
     }
   }
 
@@ -244,7 +265,7 @@ export function calculateCPCBNAQI(concentrations: Record<string, number | null |
     if (validCount < 3) missing.push(`At least 3 criteria pollutants required (only ${validCount} valid)`);
     if (!hasParticulate) missing.push('At least one particulate pollutant (PM2.5 or PM10) required');
 
-    const fallbackScale = CPCB_AQI_LEVELS[2]; // Moderate fallback styling for UI
+    const fallbackScale = CPCB_AQI_LEVELS[2]; // Fallback styling for UI
     return {
       aqi: null,
       category: 'Insufficient Data',
@@ -264,14 +285,20 @@ export function calculateCPCBNAQI(concentrations: Record<string, number | null |
   let maxAqi = -1;
   let dominantPol = 'pm25';
 
+  // Determine overall AQI and dominant pollutant
   for (const [pol, sub] of Object.entries(subIndices)) {
     if (sub > maxAqi) {
       maxAqi = sub;
       dominantPol = pol;
+    } else if (sub === maxAqi) {
+      // Prioritize particulate matter in tie
+      if (pol === 'pm25' || (pol === 'pm10' && dominantPol !== 'pm25')) {
+        dominantPol = pol;
+      }
     }
   }
 
-  const scale = getCPCBSale(maxAqi);
+  const scale = getCPCBScale(maxAqi);
   return {
     aqi: maxAqi,
     category: scale.category,
@@ -279,12 +306,12 @@ export function calculateCPCBNAQI(concentrations: Record<string, number | null |
     dominantPollutant: dominantPol,
     subIndices,
     isValid: true,
-    statusMessage: 'Calculated in accordance with Central Pollution Control Board (CPCB) NAQI formula.',
+    statusMessage: 'Calculated in full accordance with Central Pollution Control Board (CPCB) NAQI guidelines.',
   };
 }
 
-export function getCPCBSale(aqi: number | null | undefined): CPCBAQIScale {
-  if (aqi === null || aqi === undefined || isNaN(aqi)) {
+export function getCPCBScale(aqi: number | null | undefined): CPCBAQIScale {
+  if (aqi === null || aqi === undefined || isNaN(aqi) || !isFinite(aqi)) {
     return {
       category: 'Insufficient Data',
       range: 'N/A',
@@ -310,3 +337,6 @@ export function getCPCBSale(aqi: number | null | undefined): CPCBAQIScale {
   }
   return CPCB_AQI_LEVELS[CPCB_AQI_LEVELS.length - 1];
 }
+
+// Backward compatibility alias for previous typo
+export const getCPCBSale = getCPCBScale;

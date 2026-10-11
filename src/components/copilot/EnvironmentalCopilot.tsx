@@ -85,7 +85,8 @@ export const EnvironmentalCopilot: React.FC<EnvironmentalCopilotProps> = ({
       } else if (isModerate) {
         advice = `Current air quality in **${city.name}** is **Moderate** (AQI ${city.currentAQI}). Unusually sensitive individuals with preexisting respiratory conditions (e.g. asthma) should consider reducing prolonged or heavy outdoor exertion. General public is not restricted.`;
       } else {
-        advice = `Current air quality in **${city.name}** is **${scale.category}** (AQI ${city.currentAQI}). Primary pollutant is **${city.dominantPollutant.toUpperCase()}** (${city.pollutants[city.dominantPollutant].value} ${city.pollutants[city.dominantPollutant].unit}). Sensitive groups should avoid outdoor exertion. General public should shorten outdoor exposure and close unventilated windows.`;
+        const domPol = city.pollutants[city.dominantPollutant];
+        advice = `Current air quality in **${city.name}** is **${scale.category}** (AQI ${city.currentAQI}). Primary pollutant is **${city.dominantPollutant.toUpperCase()}** (${domPol?.value ?? 'N/A'} ${domPol?.unit ?? ''}). Sensitive groups should avoid outdoor exertion. General public should shorten outdoor exposure and close unventilated windows.`;
       }
 
       return {

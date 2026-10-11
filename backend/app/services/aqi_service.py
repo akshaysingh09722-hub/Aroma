@@ -17,9 +17,16 @@ from ..schemas import (
     CityItem,
 )
 
+from .cpcb_calculator import (
+    calculate_cpcb_aqi,
+    get_cpcb_category,
+    CPCB_POLLUTANTS_INFO,
+    CPCB_CATEGORIES,
+)
+
 logger = logging.getLogger("aerosense.aqi_service")
 
-# EPA AQI Breakpoints and Color Mapping
+# EPA AQI Breakpoints and Color Mapping (retained for backward compatibility)
 EPA_CATEGORIES = [
     (0, 50, "Good", "#10B981", "Air quality is satisfactory, and air pollution poses little or no risk."),
     (51, 100, "Moderate", "#F59E0B", "Air quality is acceptable. Sensitive individuals should consider reducing heavy outdoor exertion."),
@@ -29,39 +36,46 @@ EPA_CATEGORIES = [
     (301, 500, "Hazardous", "#7E22CE", "Health warning of emergency conditions: everyone is more likely to be affected. Remain indoors."),
 ]
 
-# Standard Criteria Pollutant Limits (EPA 24-hr standards in µg/m³)
+# Criteria Pollutant Limits (CPCB NAAQS standards in µg/m³, CO in mg/m³)
 POLLUTANT_LIMITS = {
-    "pm25": {"name": "Particulate Matter 2.5", "unit": "µg/m³", "limit": 35.0},
-    "pm10": {"name": "Particulate Matter 10", "unit": "µg/m³", "limit": 150.0},
-    "no2": {"name": "Nitrogen Dioxide", "unit": "ppb", "limit": 100.0},
-    "so2": {"name": "Sulfur Dioxide", "unit": "ppb", "limit": 75.0},
-    "co": {"name": "Carbon Monoxide", "unit": "ppm", "limit": 9.0},
-    "o3": {"name": "Ozone", "unit": "ppb", "limit": 70.0},
+    "pm25": {"name": "Particulate Matter 2.5", "unit": "µg/m³", "limit": 60.0},
+    "pm10": {"name": "Particulate Matter 10", "unit": "µg/m³", "limit": 100.0},
+    "no2": {"name": "Nitrogen Dioxide", "unit": "µg/m³", "limit": 80.0},
+    "so2": {"name": "Sulfur Dioxide", "unit": "µg/m³", "limit": 80.0},
+    "co": {"name": "Carbon Monoxide", "unit": "mg/m³", "limit": 2.0},
+    "o3": {"name": "Ozone", "unit": "µg/m³", "limit": 100.0},
 }
 
-# Pre-seeded global cities
+# Pre-seeded Indian & regional cities (with New Delhi as primary anchor)
 DEFAULT_CITIES = [
+    {"id": "new-delhi", "name": "New Delhi", "country": "India", "lat": 28.6139, "lng": 77.2090, "base_aqi": 215},
+    {"id": "delhi", "name": "Delhi", "country": "India", "lat": 28.6139, "lng": 77.2090, "base_aqi": 215},
+    {"id": "mumbai", "name": "Mumbai", "country": "India", "lat": 19.0760, "lng": 72.8777, "base_aqi": 142},
+    {"id": "bengaluru", "name": "Bengaluru", "country": "India", "lat": 12.9716, "lng": 77.5946, "base_aqi": 78},
+    {"id": "kolkata", "name": "Kolkata", "country": "India", "lat": 22.5726, "lng": 88.3639, "base_aqi": 185},
+    {"id": "chennai", "name": "Chennai", "country": "India", "lat": 13.0827, "lng": 80.2707, "base_aqi": 88},
+    {"id": "hyderabad", "name": "Hyderabad", "country": "India", "lat": 17.3850, "lng": 78.4867, "base_aqi": 112},
+    {"id": "ahmedabad", "name": "Ahmedabad", "country": "India", "lat": 23.0225, "lng": 72.5714, "base_aqi": 155},
+    {"id": "pune", "name": "Pune", "country": "India", "lat": 18.5204, "lng": 73.8567, "base_aqi": 95},
+    {"id": "lucknow", "name": "Lucknow", "country": "India", "lat": 26.8467, "lng": 80.9462, "base_aqi": 225},
+    {"id": "jaipur", "name": "Jaipur", "country": "India", "lat": 26.9124, "lng": 75.7873, "base_aqi": 168},
+    {"id": "patna", "name": "Patna", "country": "India", "lat": 25.5941, "lng": 85.1376, "base_aqi": 245},
+    {"id": "kanpur", "name": "Kanpur", "country": "India", "lat": 26.4499, "lng": 80.3319, "base_aqi": 230},
+    # Backward compatibility entries for automated test suites
     {"id": "tokyo", "name": "Tokyo", "country": "Japan", "lat": 35.6762, "lng": 139.6503, "base_aqi": 42},
     {"id": "new-york", "name": "New York", "country": "United States", "lat": 40.7128, "lng": -74.0060, "base_aqi": 58},
     {"id": "london", "name": "London", "country": "United Kingdom", "lat": 51.5074, "lng": -0.1278, "base_aqi": 48},
-    {"id": "new-delhi", "name": "New Delhi", "country": "India", "lat": 28.6139, "lng": 77.2090, "base_aqi": 215},
-    {"id": "paris", "name": "Paris", "country": "France", "lat": 48.8566, "lng": 2.3522, "base_aqi": 45},
-    {"id": "los-angeles", "name": "Los Angeles", "country": "United States", "lat": 34.0522, "lng": -118.2437, "base_aqi": 82},
-    {"id": "singapore", "name": "Singapore", "country": "Singapore", "lat": 1.3521, "lng": 103.8198, "base_aqi": 38},
-    {"id": "beijing", "name": "Beijing", "country": "China", "lat": 39.9042, "lng": 116.4074, "base_aqi": 142},
-    {"id": "sydney", "name": "Sydney", "country": "Australia", "lat": -33.8688, "lng": 151.2093, "base_aqi": 28},
-    {"id": "sao-paulo", "name": "São Paulo", "country": "Brazil", "lat": -23.5505, "lng": -46.6333, "base_aqi": 68},
-    {"id": "cairo", "name": "Cairo", "country": "Egypt", "lat": 30.0444, "lng": 31.2357, "base_aqi": 165},
-    {"id": "berlin", "name": "Berlin", "country": "Germany", "lat": 52.5200, "lng": 13.4050, "base_aqi": 35},
 ]
 
 
 def get_aqi_details(aqi: int):
+    """Returns EPA category details (retained for backward compatibility)."""
     aqi_clamped = max(0, min(500, aqi))
     for low, high, cat, color, adv in EPA_CATEGORIES:
         if low <= aqi_clamped <= high:
             return cat, color, adv
     return "Hazardous", "#7E22CE", EPA_CATEGORIES[-1][4]
+
 
 
 class AQIService:
@@ -152,20 +166,44 @@ class AQIService:
         aqi_val = int(raw_aqi)
 
         iaqi = data.get("iaqi", {})
-        dom_pol = data.get("dominentpol", "pm25")
-        if dom_pol not in POLLUTANT_LIMITS:
-            dom_pol = "pm25"
+        pm25 = float(iaqi.get("pm25", {}).get("v", aqi_val * 0.45))
+        pm10 = float(iaqi.get("pm10", {}).get("v", aqi_val * 0.75))
+        no2 = float(iaqi.get("no2", {}).get("v", 18.2))
+        so2 = float(iaqi.get("so2", {}).get("v", 4.5))
+        co = float(iaqi.get("co", {}).get("v", 1.2))
+        o3 = float(iaqi.get("o3", {}).get("v", 28.0))
+
+        cpcb_res = calculate_cpcb_aqi({
+            "pm25": pm25,
+            "pm10": pm10,
+            "no2": no2,
+            "so2": so2,
+            "co": co,
+            "o3": o3,
+        })
+
+        if cpcb_res.is_valid and cpcb_res.aqi is not None:
+            final_aqi = cpcb_res.aqi
+            category = cpcb_res.category
+            color = cpcb_res.category_color
+            dom_pol = cpcb_res.dominant_pollutant or "pm25"
+            advisory = cpcb_res.health_statement
+        else:
+            final_aqi = aqi_val
+            category, color, advisory = get_cpcb_category(final_aqi)
+            dom_pol = data.get("dominentpol", "pm25")
+            if dom_pol not in POLLUTANT_LIMITS:
+                dom_pol = "pm25"
 
         pollutants = self._build_pollutants_map(
-            pm25_val=iaqi.get("pm25", {}).get("v", aqi_val * 0.45),
-            pm10_val=iaqi.get("pm10", {}).get("v", aqi_val * 0.75),
-            no2_val=iaqi.get("no2", {}).get("v", 18.2),
-            so2_val=iaqi.get("so2", {}).get("v", 4.5),
-            co_val=iaqi.get("co", {}).get("v", 1.2),
-            o3_val=iaqi.get("o3", {}).get("v", 28.0),
+            pm25_val=pm25,
+            pm10_val=pm10,
+            no2_val=no2,
+            so2_val=so2,
+            co_val=co,
+            o3_val=o3,
         )
 
-        category, color, advisory = get_aqi_details(aqi_val)
         time_iso = data.get("time", {}).get("iso", datetime.now(timezone.utc).isoformat())
 
         return CurrentAQIResponse(
@@ -174,7 +212,7 @@ class AQIService:
             country=city_meta["country"],
             latitude=city_meta["lat"],
             longitude=city_meta["lng"],
-            aqi=aqi_val,
+            aqi=final_aqi,
             category=category,
             category_color=color,
             dominant_pollutant=dom_pol,
@@ -188,10 +226,10 @@ class AQIService:
             ),
             timestamp=time_iso,
             is_live_data=True,
-            provider="WAQI (aqicn.org)",
+            provider="WAQI Ground Monitoring (CPCB NAQI Computed)",
             api_key_configured=True,
             health_advisory=advisory,
-            disclaimer="Live telemetry authenticated through World Air Quality Index ground station API.",
+            disclaimer="Live telemetry authenticated through World Air Quality Index ground station API; calculated per CPCB NAQI standard.",
         )
 
     async def _fetch_open_meteo(self, city_meta: Dict[str, Any]) -> Optional[CurrentAQIResponse]:
@@ -208,16 +246,35 @@ class AQIService:
         if not current:
             return None
 
-        aqi_val = int(current.get("us_aqi", city_meta["base_aqi"]))
-        pm25 = float(current.get("pm2_5", aqi_val * 0.45))
-        pm10 = float(current.get("pm10", aqi_val * 0.75))
+        # Open-Meteo supplies concentrations in µg/m³; CO converted to mg/m³ for CPCB NAQI
+        pm25 = float(current.get("pm2_5", city_meta["base_aqi"] * 0.45))
+        pm10 = float(current.get("pm10", city_meta["base_aqi"] * 0.75))
         no2 = float(current.get("nitrogen_dioxide", 15.0))
         so2 = float(current.get("sulphur_dioxide", 4.0))
-        co = float(current.get("carbon_monoxide", 350.0)) / 1000.0  # µg/m³ to mg/m³ ~ ppm
+        co = float(current.get("carbon_monoxide", 350.0)) / 1000.0
         o3 = float(current.get("ozone", 30.0))
 
+        cpcb_res = calculate_cpcb_aqi({
+            "pm25": pm25,
+            "pm10": pm10,
+            "no2": no2,
+            "so2": so2,
+            "co": co,
+            "o3": o3,
+        })
+
+        if cpcb_res.is_valid and cpcb_res.aqi is not None:
+            aqi_val = cpcb_res.aqi
+            category = cpcb_res.category
+            color = cpcb_res.category_color
+            dominant_pol = cpcb_res.dominant_pollutant or ("pm25" if pm25 > 25 else "pm10")
+            advisory = cpcb_res.health_statement
+        else:
+            aqi_val = int(current.get("us_aqi", city_meta["base_aqi"]))
+            category, color, advisory = get_cpcb_category(aqi_val)
+            dominant_pol = "pm25" if pm25 > 25 else "pm10"
+
         pollutants = self._build_pollutants_map(pm25, pm10, no2, so2, co, o3)
-        category, color, advisory = get_aqi_details(aqi_val)
 
         return CurrentAQIResponse(
             city_id=city_meta["id"],
@@ -228,7 +285,7 @@ class AQIService:
             aqi=aqi_val,
             category=category,
             category_color=color,
-            dominant_pollutant="pm25" if pm25 > 25 else "pm10",
+            dominant_pollutant=dominant_pol,
             pollutants=pollutants,
             weather=WeatherItem(
                 temperature=22.4,
@@ -239,25 +296,51 @@ class AQIService:
             ),
             timestamp=datetime.now(timezone.utc).isoformat(),
             is_live_data=True,
-            provider="Open-Meteo Air Quality (Zero-Key Realtime)",
+            provider="Open-Meteo Air Quality (CPCB NAQI Computed)",
             api_key_configured=bool(settings.AQI_API_KEY),
             health_advisory=advisory,
             disclaimer=(
-                "Live satellite and CAMS atmospheric observation feed via Open-Meteo. "
+                "Live satellite and CAMS atmospheric observation feed processed into CPCB NAQI. "
                 + ("API key not configured for WAQI; using public Open-Meteo provider." if not settings.AQI_API_KEY else "")
             ),
         )
 
     def _generate_fallback(self, city_meta: Dict[str, Any]) -> CurrentAQIResponse:
         base_aqi = city_meta["base_aqi"]
-        category, color, advisory = get_aqi_details(base_aqi)
+        pm25 = round(base_aqi * 0.42, 1)
+        pm10 = round(base_aqi * 0.78, 1)
+        no2 = 22.4
+        so2 = 5.1
+        co = 1.4
+        o3 = 34.0
+
+        cpcb_res = calculate_cpcb_aqi({
+            "pm25": pm25,
+            "pm10": pm10,
+            "no2": no2,
+            "so2": so2,
+            "co": co,
+            "o3": o3,
+        })
+
+        if cpcb_res.is_valid and cpcb_res.aqi is not None:
+            final_aqi = cpcb_res.aqi
+            category = cpcb_res.category
+            color = cpcb_res.category_color
+            dominant_pol = cpcb_res.dominant_pollutant or "pm25"
+            advisory = cpcb_res.health_statement
+        else:
+            final_aqi = base_aqi
+            category, color, advisory = get_cpcb_category(base_aqi)
+            dominant_pol = "pm25"
+
         pollutants = self._build_pollutants_map(
-            pm25_val=base_aqi * 0.42,
-            pm10_val=base_aqi * 0.78,
-            no2_val=22.4,
-            so2_val=5.1,
-            co_val=1.4,
-            o3_val=34.0,
+            pm25_val=pm25,
+            pm10_val=pm10,
+            no2_val=no2,
+            so2_val=so2,
+            co_val=co,
+            o3_val=o3,
         )
         return CurrentAQIResponse(
             city_id=city_meta["id"],
@@ -265,10 +348,10 @@ class AQIService:
             country=city_meta["country"],
             latitude=city_meta["lat"],
             longitude=city_meta["lng"],
-            aqi=base_aqi,
+            aqi=final_aqi,
             category=category,
             category_color=color,
-            dominant_pollutant="pm25",
+            dominant_pollutant=dominant_pol,
             pollutants=pollutants,
             weather=WeatherItem(
                 temperature=20.0,
@@ -279,7 +362,7 @@ class AQIService:
             ),
             timestamp=datetime.now(timezone.utc).isoformat(),
             is_live_data=False,
-            provider="Local Seed Baseline",
+            provider="Local Seed Baseline (CPCB NAQI Standard)",
             api_key_configured=bool(settings.AQI_API_KEY),
             health_advisory=advisory,
             disclaimer="Local baseline telemetry displayed. Configure AQI_API_KEY or ensure internet access for live feeds.",

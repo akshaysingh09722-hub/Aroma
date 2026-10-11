@@ -269,8 +269,8 @@ export const CityExplorerPage: React.FC = () => {
                         <span>{city.dominantPollutant}</span>
                       </div>
                       <span className="text-[10px] text-slate-500">
-                        {city.pollutants[city.dominantPollutant].value}{' '}
-                        {city.pollutants[city.dominantPollutant].unit}
+                        {city.pollutants[city.dominantPollutant]?.value ?? '—'}{' '}
+                        {city.pollutants[city.dominantPollutant]?.unit ?? ''}
                       </span>
                     </div>
                   </div>
