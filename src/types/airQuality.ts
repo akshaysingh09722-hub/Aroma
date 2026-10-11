@@ -1,12 +1,16 @@
 export type AQICategory =
   | 'Good'
+  | 'Satisfactory'
   | 'Moderate'
+  | 'Poor'
+  | 'Very Poor'
+  | 'Severe'
+  | 'Insufficient Data'
   | 'Unhealthy for Sensitive Groups'
   | 'Unhealthy'
-  | 'Very Unhealthy'
   | 'Hazardous';
 
-export type PollutantType = 'pm25' | 'pm10' | 'no2' | 'so2' | 'co' | 'o3';
+export type PollutantType = 'pm25' | 'pm10' | 'no2' | 'so2' | 'co' | 'o3' | 'nh3' | 'pb';
 
 export interface PollutantMeasurement {
   id: PollutantType;
